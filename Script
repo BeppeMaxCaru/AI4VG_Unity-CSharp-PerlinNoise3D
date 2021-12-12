@@ -1,0 +1,132 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Video : MonoBehaviour
+{
+
+    public int x = 50;
+    public int y = 50;
+    public int z = 50;
+
+    public int samplingSize = 10;
+
+    public GameObject cloud;
+
+    private Vector3[,,] space;
+
+    //Return matrix sapce
+    private Vector3[,,] initializeSpace(int x, int y, int z)
+    {
+        return new Vector3[x, y, z];
+    }
+
+    private Vector3[,,] fillSpace(Vector3[,,] space)
+    {
+        
+        for (int i = 0; i < space.GetLength(0); i++)
+        {
+            for (int j = 0; j < space.GetLength(1); j++)
+            {
+                for (int k = 0; k < space.GetLength(2); k++)
+                {
+                    //space[i, j, k] = new Vector3(i, j, k);
+                    //Vector3 rand = Random.insideUnitSphere;
+                    //Instantiate(cloud, space[i, j, k] + rand, Quaternion.identity);
+
+                    space[i, j, k] = new Vector3(i, j, k) + Random.insideUnitSphere;
+                }
+            }
+        }
+        
+        return space;
+    }
+
+    private void perlinNoise(Vector3[,,] space)
+    {
+        for (int i = 0; i < space.GetLength(0); i++)
+        {
+            for (int j = 0; j < space.GetLength(1); j++)
+            {
+                for (int k = 0; k < space.GetLength(2); k++)
+                {
+                    //Debug.Log("Here");
+
+                    int X0 = Mathf.FloorToInt(space[i, j, k].x);
+                    int X1 = Mathf.CeilToInt(space[i, j, k].x);
+
+                    int Y0 = Mathf.FloorToInt(space[i, j, k].y);
+                    int Y1 = Mathf.CeilToInt(space[i, j, k].y);
+
+                    int Z0 = Mathf.FloorToInt(space[i, j, k].z);
+                    int Z1 = Mathf.CeilToInt(space[i, j, k].z);
+
+                    //Instantiate(cloud, space[i, j, k], Quaternion.identity);
+
+                    //Errore qui in space
+                    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+                    //X0 fixed and i permute all the others
+                    float X0Y0Z0;
+
+                    try
+                    {
+                        X0Y0Z0 = Vector3.Dot(space[X0, Y0, Z0], new Vector3(i, j, k) - new Vector3(X0, Z0, Y0));
+                    } catch
+                    {
+                        Debug.Log("Beccato");
+                    }
+
+                    float X0Y0Z1 = Vector3.Dot(space[X0, Y0, Z1], new Vector3(i, j, k) - new Vector3(X0, Z1, Y0));
+
+                    float X0Y1Z0 = Vector3.Dot(space[X0, Y1, Z0], new Vector3(i, j, k) - new Vector3(X0, Z0, Y1));
+
+                    float X0Y1Z1 = Vector3.Dot(space[X0, Y1, Z1], new Vector3(i, j, k) - new Vector3(X0, Z1, Y1));
+
+                    //X1 fixed and i permute all the others
+                    float X1Y0Z0 = Vector3.Dot(space[X1, Y0, Z0], new Vector3(i, j, k) - new Vector3(X1, Z0, Y0));
+
+                    float X1Y0Z1 = Vector3.Dot(space[X1, Y0, Z1], new Vector3(i, j, k) - new Vector3(X1, Z1, Y0));
+
+                    float X1Y1Z0 = Vector3.Dot(space[X1, Y1, Z0], new Vector3(i, j, k) - new Vector3(X1, Z0, Y1));
+
+                    float X1Y1Z1 = Vector3.Dot(space[X1, Y1, Z1], new Vector3(i, j, k) - new Vector3(X1, Z1, Y1));
+
+                    //Start lerping
+
+                    //Mathf.Lerp()
+
+                    Debug.Log("Here");
+
+
+                    Instantiate(cloud, space[i, j, k], Quaternion.identity);
+
+                }
+            }
+        }
+
+        //return space;
+    }
+
+
+    // Start is called before the first frame update
+    void Start()
+    {
+
+        //space = initializeSpace(x, y, z);
+        space = new Vector3[x, y, z];
+
+        //filled space
+        space = fillSpace(space);
+
+        //space =
+        perlinNoise(space);
+
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+        
+    }
+}

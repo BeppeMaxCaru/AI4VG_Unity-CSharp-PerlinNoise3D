@@ -13,6 +13,8 @@ public class Video : MonoBehaviour
 
     public GameObject cloud;
 
+    public float probability = 0.5f;
+
     private Vector3[,,] space;
 
     //Return matrix sapce
@@ -51,55 +53,94 @@ public class Video : MonoBehaviour
                 for (int k = 0; k < space.GetLength(2); k++)
                 {
                     //Debug.Log("Here");
-
+                    //Validity check
+                    //Se x0 e gli altri sono tutti tra 0 e x
+                    if (isViolatingSkyBoxConstraints(space[i, j, k].x, 0f, (float)x)) continue;
+                    //Se x0 e gli altri sono tutti tra 0 e x
                     int X0 = Mathf.FloorToInt(space[i, j, k].x);
+                    if (isViolatingSkyBoxConstraints(X0, 0, x)) continue;
+
                     int X1 = Mathf.CeilToInt(space[i, j, k].x);
+                    if (isViolatingSkyBoxConstraints(X1, 0, x)) continue;
 
+                    if (isViolatingSkyBoxConstraints(space[i, j, k].y, 0f, (float)y)) continue;
                     int Y0 = Mathf.FloorToInt(space[i, j, k].y);
-                    int Y1 = Mathf.CeilToInt(space[i, j, k].y);
+                    if (isViolatingSkyBoxConstraints(Y0, 0, y)) continue;
 
+                    int Y1 = Mathf.CeilToInt(space[i, j, k].y);
+                    if (isViolatingSkyBoxConstraints(Y1, 0, y)) continue;
+
+                    if (isViolatingSkyBoxConstraints(space[i, j, k].z, 0f, (float)z)) continue;
                     int Z0 = Mathf.FloorToInt(space[i, j, k].z);
+                    if (isViolatingSkyBoxConstraints(Z0, 0, z)) continue;
+
                     int Z1 = Mathf.CeilToInt(space[i, j, k].z);
+                    if (isViolatingSkyBoxConstraints(Z1, 0, z)) continue;
 
                     //Instantiate(cloud, space[i, j, k], Quaternion.identity);
 
                     //Errore qui in space
                     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    Debug.Log("space x  = " + space[i, j, k].x + ", y  =" + space[i, j, k].y + ", z  =" + space[i, j, k].z);
+                    Debug.Log("space X0 = " + X0 + ", Y0 =" + Y0 + ", Z0 =" + Z0);
 
                     //X0 fixed and i permute all the others
-                    float X0Y0Z0;
+                    float X0Y0Z0 = Vector3.Dot(space[X0, Y0, Z0], new Vector3(i, j, k) - new Vector3(X0, Z0, Y0));
 
                     try
                     {
                         X0Y0Z0 = Vector3.Dot(space[X0, Y0, Z0], new Vector3(i, j, k) - new Vector3(X0, Z0, Y0));
+                        //Debug.Log("X0Y0Z0 " + X0Y0Z0);
                     } catch
                     {
                         Debug.Log("Beccato");
                     }
 
+                    X0Y0Z0 = Vector3.Dot(space[X0, Y0, Z0], new Vector3(i, j, k) - new Vector3(X0, Z0, Y0));
+
+                    //Servono i controlli anche sugli swap di coordinate??
+                    //I Dot product possono venire negativi!
+                    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
                     float X0Y0Z1 = Vector3.Dot(space[X0, Y0, Z1], new Vector3(i, j, k) - new Vector3(X0, Z1, Y0));
-
+                    //Debug.Log("X0Y0Z1 " + X0Y0Z1);
                     float X0Y1Z0 = Vector3.Dot(space[X0, Y1, Z0], new Vector3(i, j, k) - new Vector3(X0, Z0, Y1));
-
+                    //Debug.Log("X0Y1Z0 " + X0Y1Z0);
                     float X0Y1Z1 = Vector3.Dot(space[X0, Y1, Z1], new Vector3(i, j, k) - new Vector3(X0, Z1, Y1));
-
+                    //Debug.Log("X0Y1Z1 " + X0Y1Z1);
                     //X1 fixed and i permute all the others
                     float X1Y0Z0 = Vector3.Dot(space[X1, Y0, Z0], new Vector3(i, j, k) - new Vector3(X1, Z0, Y0));
-
+                    //Debug.Log("X1Y0Z0 " + X1Y0Z0);
                     float X1Y0Z1 = Vector3.Dot(space[X1, Y0, Z1], new Vector3(i, j, k) - new Vector3(X1, Z1, Y0));
-
+                    //Debug.Log("X1Y0Z1 " + X1Y0Z1);
                     float X1Y1Z0 = Vector3.Dot(space[X1, Y1, Z0], new Vector3(i, j, k) - new Vector3(X1, Z0, Y1));
-
+                    //Debug.Log("X1Y1Z0 " + X1Y1Z0);
                     float X1Y1Z1 = Vector3.Dot(space[X1, Y1, Z1], new Vector3(i, j, k) - new Vector3(X1, Z1, Y1));
-
+                    //Debug.Log("X1Y1Z1 " + X1Y1Z1);
                     //Start lerping
 
                     //Mathf.Lerp()
 
-                    Debug.Log("Here");
+                    Debug.Log("Cycle number: " + i + " " + j + " " + k);
 
 
-                    Instantiate(cloud, space[i, j, k], Quaternion.identity);
+                    //Instantiate(cloud, space[i, j, k], Quaternion.identity);
+
+                    float lerp1 = Mathf.Lerp(X0Y0Z0, X0Y0Z1, 0.5f);
+                    float lerp2 = Mathf.Lerp(X0Y1Z0, X0Y1Z1, 0.5f);
+                    float lerpOneAndTwo = Mathf.Lerp(lerp1, lerp2, 0.5f);
+
+                    float lerp3 = Mathf.Lerp(X1Y0Z0, X1Y0Z1, 0.5f);
+                    float lerp4 = Mathf.Lerp(X1Y1Z0, X1Y1Z1, 0.5f);
+                    float lerpThreeAndFour = Mathf.Lerp(lerp3, lerp4, 0.5f);
+
+                    float finalLerp = Mathf.Lerp(lerpOneAndTwo, lerpThreeAndFour, 0.5f);
+                    Debug.Log("Final lerp: " + finalLerp);
+
+                    //Instantiate(cloud, space[i, j, k], Quaternion.identity);
+                    //if (finalLerp >= probability) Instantiate(cloud, space[i, j, k], Quaternion.identity);
+
+                    Instantiate(cloud, new Vector3(i, j, finalLerp), Quaternion.identity);
 
                 }
             }
@@ -108,6 +149,14 @@ public class Video : MonoBehaviour
         //return space;
     }
 
+    private bool isViolatingSkyBoxConstraints(float dimension, float min, float max)
+    {
+
+        Debug.Log("input: " + dimension + " min: " + min + " max: " + max);
+
+        if ((min <= dimension) && (dimension < max)) return false;
+        else return true;
+    }
 
     // Start is called before the first frame update
     void Start()

@@ -2,180 +2,242 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Video : MonoBehaviour
+public class FinallyCorrect : MonoBehaviour
 {
+    //Random init
+    public int randomSeed = 0;
 
-    public int x = 50;
-    public int y = 50;
-    public int z = 50;
+    //3D dimensions
+    [Min(0)]
+    public int x = 0;
+    [Min(0)]
+    public int y = 0;
+    [Min(0)]
+    public int z = 0;
 
-    public int samplingSize = 10;
+    //Restrict to sky box
+    public bool normalize = true;
+    public bool scale = true;
+
+    [Range(0f, 1f)]
+    public float cloudiness = 1f;
+
+    public bool borderOffset = false;
+
+    public bool fractals = false;
+    [Min(0)]
+    public int octaves = 1;
+    [Min(0)]
+    public float persistence = 1f;
 
     public GameObject cloud;
 
-    public float probability = 0.5f;
-
-    private Vector3[,,] space;
-
-    //Return matrix sapce
-    private Vector3[,,] initializeSpace(int x, int y, int z)
+    //OK
+    //Initialize random arrays on sky's unit cubes vertices
+    private Vector3[,,] initRandomVertices(Vector3[,,] perlinGrid)
     {
-        return new Vector3[x, y, z];
-    }
-
-    private Vector3[,,] fillSpace(Vector3[,,] space)
-    {
-        
-        for (int i = 0; i < space.GetLength(0); i++)
+        for (int i = 0; i < perlinGrid.GetLength(0); i++)
         {
-            for (int j = 0; j < space.GetLength(1); j++)
+            for (int j = 0; j < perlinGrid.GetLength(1); j++)
             {
-                for (int k = 0; k < space.GetLength(2); k++)
+                for (int k = 0; k < perlinGrid.GetLength(2); k++)
                 {
-                    //space[i, j, k] = new Vector3(i, j, k);
-                    //Vector3 rand = Random.insideUnitSphere;
-                    //Instantiate(cloud, space[i, j, k] + rand, Quaternion.identity);
-
-                    space[i, j, k] = new Vector3(i, j, k) + Random.insideUnitSphere;
-                }
-            }
-        }
-        
-        return space;
-    }
-
-    private void perlinNoise(Vector3[,,] space)
-    {
-        for (int i = 0; i < space.GetLength(0); i++)
-        {
-            for (int j = 0; j < space.GetLength(1); j++)
-            {
-                for (int k = 0; k < space.GetLength(2); k++)
-                {
-                    //Debug.Log("Here");
-                    //Validity check
-                    //Se x0 e gli altri sono tutti tra 0 e x
-                    if (isViolatingSkyBoxConstraints(space[i, j, k].x, 0f, (float)x)) continue;
-                    //Se x0 e gli altri sono tutti tra 0 e x
-                    int X0 = Mathf.FloorToInt(space[i, j, k].x);
-                    if (isViolatingSkyBoxConstraints(X0, 0, x)) continue;
-
-                    int X1 = Mathf.CeilToInt(space[i, j, k].x);
-                    if (isViolatingSkyBoxConstraints(X1, 0, x)) continue;
-
-                    if (isViolatingSkyBoxConstraints(space[i, j, k].y, 0f, (float)y)) continue;
-                    int Y0 = Mathf.FloorToInt(space[i, j, k].y);
-                    if (isViolatingSkyBoxConstraints(Y0, 0, y)) continue;
-
-                    int Y1 = Mathf.CeilToInt(space[i, j, k].y);
-                    if (isViolatingSkyBoxConstraints(Y1, 0, y)) continue;
-
-                    if (isViolatingSkyBoxConstraints(space[i, j, k].z, 0f, (float)z)) continue;
-                    int Z0 = Mathf.FloorToInt(space[i, j, k].z);
-                    if (isViolatingSkyBoxConstraints(Z0, 0, z)) continue;
-
-                    int Z1 = Mathf.CeilToInt(space[i, j, k].z);
-                    if (isViolatingSkyBoxConstraints(Z1, 0, z)) continue;
-
-                    //Instantiate(cloud, space[i, j, k], Quaternion.identity);
-
-                    //Errore qui in space
-                    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                    Debug.Log("space x  = " + space[i, j, k].x + ", y  =" + space[i, j, k].y + ", z  =" + space[i, j, k].z);
-                    Debug.Log("space X0 = " + X0 + ", Y0 =" + Y0 + ", Z0 =" + Z0);
-
-                    //X0 fixed and i permute all the others
-                    float X0Y0Z0 = Vector3.Dot(space[X0, Y0, Z0], new Vector3(i, j, k) - new Vector3(X0, Z0, Y0));
-
-                    try
-                    {
-                        X0Y0Z0 = Vector3.Dot(space[X0, Y0, Z0], new Vector3(i, j, k) - new Vector3(X0, Z0, Y0));
-                        //Debug.Log("X0Y0Z0 " + X0Y0Z0);
-                    } catch
-                    {
-                        Debug.Log("Beccato");
-                    }
-
-                    X0Y0Z0 = Vector3.Dot(space[X0, Y0, Z0], new Vector3(i, j, k) - new Vector3(X0, Z0, Y0));
-
-                    //Servono i controlli anche sugli swap di coordinate??
-                    //I Dot product possono venire negativi!
-                    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-                    float X0Y0Z1 = Vector3.Dot(space[X0, Y0, Z1], new Vector3(i, j, k) - new Vector3(X0, Z1, Y0));
-                    //Debug.Log("X0Y0Z1 " + X0Y0Z1);
-                    float X0Y1Z0 = Vector3.Dot(space[X0, Y1, Z0], new Vector3(i, j, k) - new Vector3(X0, Z0, Y1));
-                    //Debug.Log("X0Y1Z0 " + X0Y1Z0);
-                    float X0Y1Z1 = Vector3.Dot(space[X0, Y1, Z1], new Vector3(i, j, k) - new Vector3(X0, Z1, Y1));
-                    //Debug.Log("X0Y1Z1 " + X0Y1Z1);
-                    //X1 fixed and i permute all the others
-                    float X1Y0Z0 = Vector3.Dot(space[X1, Y0, Z0], new Vector3(i, j, k) - new Vector3(X1, Z0, Y0));
-                    //Debug.Log("X1Y0Z0 " + X1Y0Z0);
-                    float X1Y0Z1 = Vector3.Dot(space[X1, Y0, Z1], new Vector3(i, j, k) - new Vector3(X1, Z1, Y0));
-                    //Debug.Log("X1Y0Z1 " + X1Y0Z1);
-                    float X1Y1Z0 = Vector3.Dot(space[X1, Y1, Z0], new Vector3(i, j, k) - new Vector3(X1, Z0, Y1));
-                    //Debug.Log("X1Y1Z0 " + X1Y1Z0);
-                    float X1Y1Z1 = Vector3.Dot(space[X1, Y1, Z1], new Vector3(i, j, k) - new Vector3(X1, Z1, Y1));
-                    //Debug.Log("X1Y1Z1 " + X1Y1Z1);
-                    //Start lerping
-
-                    //Mathf.Lerp()
-
-                    Debug.Log("Cycle number: " + i + " " + j + " " + k);
-
-
-                    //Instantiate(cloud, space[i, j, k], Quaternion.identity);
-
-                    float lerp1 = Mathf.Lerp(X0Y0Z0, X0Y0Z1, 0.5f);
-                    float lerp2 = Mathf.Lerp(X0Y1Z0, X0Y1Z1, 0.5f);
-                    float lerpOneAndTwo = Mathf.Lerp(lerp1, lerp2, 0.5f);
-
-                    float lerp3 = Mathf.Lerp(X1Y0Z0, X1Y0Z1, 0.5f);
-                    float lerp4 = Mathf.Lerp(X1Y1Z0, X1Y1Z1, 0.5f);
-                    float lerpThreeAndFour = Mathf.Lerp(lerp3, lerp4, 0.5f);
-
-                    float finalLerp = Mathf.Lerp(lerpOneAndTwo, lerpThreeAndFour, 0.5f);
-                    Debug.Log("Final lerp: " + finalLerp);
-
-                    //Instantiate(cloud, space[i, j, k], Quaternion.identity);
-                    //if (finalLerp >= probability) Instantiate(cloud, space[i, j, k], Quaternion.identity);
-
-                    Instantiate(cloud, new Vector3(i, j, finalLerp), Quaternion.identity);
-
+                    perlinGrid[i, j, k] = perlinGrid[i, j, k] + Random.insideUnitSphere;
                 }
             }
         }
 
-        //return space;
+        return perlinGrid;
+
     }
 
-    private bool isViolatingSkyBoxConstraints(float dimension, float min, float max)
+    //OK
+    //Calculate perlin noise for current point in the cube
+    private float perlinNoise(int i, int j, int k, Vector3[,,] perlinGrid)
     {
 
-        Debug.Log("input: " + dimension + " min: " + min + " max: " + max);
+        //Phase 1
+        //Find current cube vertices
+        int X0 = Mathf.Clamp(Mathf.FloorToInt(perlinGrid[i, j, k].x), 0, x);
+        int X1 = Mathf.Clamp(Mathf.CeilToInt(perlinGrid[i, j, k].x), 0, x);
 
-        if ((min <= dimension) && (dimension < max)) return false;
-        else return true;
+        int Y0 = Mathf.Clamp(Mathf.FloorToInt(perlinGrid[i, j, k].y), 0, y);
+        int Y1 = Mathf.Clamp(Mathf.CeilToInt(perlinGrid[i, j, k].y), 0, y);
+
+        int Z0 = Mathf.Clamp(Mathf.FloorToInt(perlinGrid[i, j, k].z), 0, z);
+        int Z1 = Mathf.Clamp(Mathf.CeilToInt(perlinGrid[i, j, k].z), 0, z);
+
+        //Phase 2
+        //Start permutations
+
+        //Fix X0 and permute Y and Z
+        float X0Y0Z0 = Vector3.Dot(perlinGrid[X0, Y0, Z0], new Vector3(perlinGrid[i, j, k].x, perlinGrid[i, j, k].y, perlinGrid[i, j, k].z) - new Vector3(X0, Z0, Y0));
+        //Debug.Log("X0Y0Z0 " + X0Y0Z0);
+        float X0Y0Z1 = Vector3.Dot(perlinGrid[X0, Y0, Z1], new Vector3(perlinGrid[i, j, k].x, perlinGrid[i, j, k].y, perlinGrid[i, j, k].z) - new Vector3(X0, Z1, Y0));
+        //Debug.Log("X0Y0Z1 " + X0Y0Z1);
+        float X0Y1Z0 = Vector3.Dot(perlinGrid[X0, Y1, Z0], new Vector3(perlinGrid[i, j, k].x, perlinGrid[i, j, k].y, perlinGrid[i, j, k].z) - new Vector3(X0, Z0, Y1));
+        //Debug.Log("X0Y1Z0 " + X0Y1Z0);
+        float X0Y1Z1 = Vector3.Dot(perlinGrid[X0, Y1, Z1], new Vector3(perlinGrid[i, j, k].x, perlinGrid[i, j, k].y, perlinGrid[i, j, k].z) - new Vector3(X0, Z1, Y1));
+        //Debug.Log("X0Y1Z1 " + X0Y1Z1);
+
+        //Fix X1 and permute Y and Z
+        float X1Y0Z0 = Vector3.Dot(perlinGrid[X1, Y0, Z0], new Vector3(perlinGrid[i, j, k].x, perlinGrid[i, j, k].y, perlinGrid[i, j, k].z) - new Vector3(X1, Z0, Y0));
+        //Debug.Log("X1Y0Z0 " + X1Y0Z0);
+        float X1Y0Z1 = Vector3.Dot(perlinGrid[X1, Y0, Z1], new Vector3(perlinGrid[i, j, k].x, perlinGrid[i, j, k].y, perlinGrid[i, j, k].z) - new Vector3(X1, Z1, Y0));
+        //Debug.Log("X1Y0Z1 " + X1Y0Z1);
+        float X1Y1Z0 = Vector3.Dot(perlinGrid[X1, Y1, Z0], new Vector3(perlinGrid[i, j, k].x, perlinGrid[i, j, k].y, perlinGrid[i, j, k].z) - new Vector3(X1, Z0, Y1));
+        //Debug.Log("X1Y1Z0 " + X1Y1Z0);
+        float X1Y1Z1 = Vector3.Dot(perlinGrid[X1, Y1, Z1], new Vector3(perlinGrid[i, j, k].x, perlinGrid[i, j, k].y, perlinGrid[i, j, k].z) - new Vector3(X1, Z1, Y1));
+
+        //Phase 3
+        //Use perlin function to smooth values
+        float perlinX = fadeByPerlin((perlinGrid[i, j, k].x - X0));
+        float perlinY = fadeByPerlin((perlinGrid[i, j, k].y - Y0));
+        float perlinZ = fadeByPerlin((perlinGrid[i, j, k].z - Z0));
+
+        //Debug.Log("perlinX: " + perlinX);
+        //Debug.Log("perlinY: " + perlinY);
+        //Debug.Log("perlinZ: " + perlinZ);
+
+        //Phase 4
+        //Start lerping to get the vertices weighted average
+
+        //Fix X0 and Y then lerp along Z
+        float X0Y0lerpedZ = Mathf.Lerp(X0Y0Z0, X0Y0Z1, perlinZ);
+        float X0Y1lerpedZ = Mathf.Lerp(X0Y1Z0, X0Y1Z1, perlinZ);
+        //Fix X0 then lerp along Y
+        float X0lerpedYZ = Mathf.Lerp(X0Y0lerpedZ, X0Y1lerpedZ, perlinY);
+
+        //Fix X1 and Y and lerp along Z
+        float X1Y0lerpedZ = Mathf.Lerp(X1Y0Z0, X1Y0Z1, perlinZ);
+        float X1Y1lerpedZ = Mathf.Lerp(X1Y1Z0, X1Y1Z1, perlinZ);
+        //Then X1 then lerp along Y
+        float X1lerpedYZ = Mathf.Lerp(X1Y0lerpedZ, X1Y1lerpedZ, perlinY);
+
+        //Finally lerp along X
+        float lerpedXYZ = Mathf.Lerp(X0lerpedYZ, X1lerpedYZ, perlinX);
+        //I receive the combined height -> Perlin Noise
+
+        //Debug.Log("final lerp: " + lerpedXYZ);
+
+        //Return noise value inside the unit cube
+        return lerpedXYZ;
+
+    }
+
+    private float fractalNoise(int i, int j, int k, Vector3[,,] perlinGrid, int octaves, float persistence)
+    {
+
+        float total = 0;
+        int frequency = 1;
+        float amplitude = 1;
+        float maxValue = 0;
+
+        for (int t = 0; t < octaves; t++)
+        {
+            total += perlinNoise(i * frequency, j * frequency, k * frequency, perlinGrid) * amplitude;
+
+            maxValue += amplitude;
+
+            amplitude *= persistence;
+            frequency *= 2;
+        }
+
+        return total / maxValue;
+
+    }
+
+    //OK
+    //Perlin noise generator function by Perlin himself
+    private float fadeByPerlin(float side)
+    {
+        return 6 * Mathf.Pow(side, 5) - 15 * Mathf.Pow(side, 4) + 10 * Mathf.Pow(side, 3);
+    }
+
+    //OK
+    //Normalizer function
+    private float normalizeNoise(float valueToNormalize, float min, float max)
+    {
+        return (valueToNormalize - min) / (max - min);
+    }
+
+    //OK
+    //Scaling function
+    private float scaleNoise(float noise, float min, float max)
+    {
+        return (noise * (max - min) + min);
     }
 
     // Start is called before the first frame update
     void Start()
     {
 
-        //space = initializeSpace(x, y, z);
-        space = new Vector3[x, y, z];
+        if (randomSeed == 0) randomSeed = (int)System.DateTime.Now.Ticks;
+        Random.InitState(randomSeed);
 
-        //filled space
-        space = fillSpace(space);
+        Vector3[,,] perlinGrid = new Vector3[x, y, z];
+        float[,,] noiseValues = new float[x, y, z];
 
-        //space =
-        perlinNoise(space);
+        perlinGrid = initRandomVertices(perlinGrid);
+
+        float maxNoise = 0f;
+        float minNoise = 0f;
+
+        for (int i = 0; i < x; i++)
+        {
+            for (int j = 0; j < y; j++)
+            {
+                for (int k = 0; k < z; k++)
+                {
+
+                    float noise;
+
+                    if (fractals == false)
+                    {
+                        noise = perlinNoise(i, j, k, perlinGrid);
+                    } else
+                    {
+                        noise = fractalNoise(i, j, k, perlinGrid, octaves, persistence);
+                    }
+
+                    //float noise = perlinNoise(i, j, k, perlinGrid);
+
+                    if (noise < minNoise) minNoise = noise;
+                    if (noise > maxNoise) maxNoise = noise;
+
+                    //Noise is the new height!
+                    noiseValues[i, j, k] = noise;
+
+                }
+            }
+        }
+
+        for (int i = 0; i < x; i++)
+        {
+            for (int j = 0; j < y; j++)
+            {
+                for (int k = 0; k < z; k++)
+                {
+
+                    if (Random.value > cloudiness) continue;
+
+                    float finalNoise = noiseValues[i, j, k];
+
+                    if (normalize == true) finalNoise = normalizeNoise(finalNoise, minNoise, (maxNoise));
+
+                    if (scale == true) finalNoise = scaleNoise(finalNoise, 0, y);
+
+                    if (borderOffset == true && (i == 0 || i == x - 1 || k == 0 || k == z - 1))
+                    {
+                        Vector2 offset = Random.insideUnitCircle;
+                        Instantiate(cloud, new Vector3(i + offset.x, finalNoise, k + offset.y), Quaternion.identity);
+                    } else 
+                        Instantiate(cloud, new Vector3(i, finalNoise, k), Quaternion.identity);
+
+                }
+            }
+        }
 
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }
